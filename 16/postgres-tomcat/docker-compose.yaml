@@ -17,12 +17,13 @@
 # Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 # 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 # ---------------------------------------------------------------------------
-version: '2'
+version: '3'
+
 networks:
   bridge:
     driver: bridge
+
 services:
-  # The container that runs XWiki in Tomcat, with the appropriate JDBC driver (for postgres).
   web:
     image: "xwiki:${XWIKI_VERSION}-postgres-tomcat"
     container_name: xwiki-postgres-tomcat-web
@@ -30,21 +31,25 @@ services:
       - db
     ports:
       - "8181:8080"
-    # Default values defined in .env file.
-    # The DB_USER/DB_PASSWORD/DB_DATABASE/DB_HOST variables are used in the hibernate.cfg.xml file.
     environment:
       - XWIKI_VERSION=${XWIKI_VERSION}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_DATABASE=${DB_DATABASE}
       - DB_HOST=xwiki-postgres-db
-    # Provide a name instead of an auto-generated id for xwiki data (the permanent directory in included in it)
-    # configured in the Dockerfile, to make it simpler to identify in 'docker volume ls'.
+      - XWIKI_DOMAIN=${XWIKI_DOMAIN}
     volumes:
       - xwiki-data:/usr/local/xwiki
     networks:
       - bridge
-  # The container that runs the database (postgres)
+    labels:
+      - coolify.managed=true
+      - coolify.applicationId=5
+      - coolify.type=application
+      - traefik.enable=true
+      - "traefik.http.routers.xwiki.rule=Host(`${XWIKI_DOMAIN}`)"
+      - traefik.http.routers.xwiki.entryPoints=http
+
   db:
     image: "postgres:16"
     container_name: xwiki-postgres-db
@@ -58,6 +63,7 @@ services:
       - POSTGRES_INITDB_ARGS="--encoding=UTF8"
     networks:
       - bridge
+
 volumes:
   postgres-data: {}
   xwiki-data: {}
